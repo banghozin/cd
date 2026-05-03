@@ -1,0 +1,6 @@
+[
+  { "market": "crypto", "symbol": "BTCUSDT" },
+  { "market": "crypto", "symbol": "ETHUSDT" },
+  { "market": "stock", "symbol": "AAPL" },
+  { "market": "stock", "symbol": "NVDA" }
+]
