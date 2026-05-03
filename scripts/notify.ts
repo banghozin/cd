@@ -19,7 +19,9 @@ type Alert = {
 
 const WATCHLIST_PATH = "data/watchlist.json";
 const STATE_PATH = "data/state.json";
+const HISTORY_PATH = "data/history.jsonl";
 const BOT_NAME = "우크당거스 알림 봇";
+const HISTORY_MAX_LINES = 5000;
 
 const STRONG_SCORE = 0.5;
 
@@ -35,6 +37,33 @@ async function loadJSON<T>(p: string, fallback: T): Promise<T> {
 async function saveJSON(p: string, data: unknown): Promise<void> {
   await fs.mkdir(path.dirname(p), { recursive: true });
   await fs.writeFile(p, JSON.stringify(data, null, 2) + "\n", "utf8");
+}
+
+type HistoryEntry = {
+  ts: string;
+  market: Market;
+  symbol: string;
+  bias: SignalDir;
+  score: number;
+  price: number;
+  alerted?: "bias-flip" | "strong-signal";
+};
+
+async function appendHistory(entries: HistoryEntry[]): Promise<void> {
+  if (entries.length === 0) return;
+  await fs.mkdir(path.dirname(HISTORY_PATH), { recursive: true });
+  const newLines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+
+  let existing = "";
+  try {
+    existing = await fs.readFile(HISTORY_PATH, "utf8");
+  } catch {}
+
+  const all = existing + newLines;
+  const lines = all.split("\n").filter((l) => l.length > 0);
+  const trimmed =
+    lines.length > HISTORY_MAX_LINES ? lines.slice(-HISTORY_MAX_LINES) : lines;
+  await fs.writeFile(HISTORY_PATH, trimmed.join("\n") + "\n", "utf8");
 }
 
 function biasEmoji(b: SignalDir): string {
@@ -131,6 +160,7 @@ async function main(): Promise<void> {
   const prevState = await loadJSON<StoredState>(STATE_PATH, {});
   const nextState: StoredState = {};
   const alerts: Alert[] = [];
+  const historyEntries: HistoryEntry[] = [];
 
   for (const { market, symbol } of watchlist) {
     const key = `${market}:${symbol}`;
@@ -145,11 +175,24 @@ async function main(): Promise<void> {
         prev != null && prev !== cur && cur !== "neutral" && prev !== "neutral";
       const strong = Math.abs(score) >= STRONG_SCORE && cur !== "neutral";
 
+      let alertReason: HistoryEntry["alerted"];
       if (flipped) {
         alerts.push({ analysis, reason: "bias-flip", prevBias: prev });
+        alertReason = "bias-flip";
       } else if (strong && (!prev || prev === "neutral")) {
         alerts.push({ analysis, reason: "strong-signal" });
+        alertReason = "strong-signal";
       }
+
+      historyEntries.push({
+        ts: analysis.timestamp,
+        market,
+        symbol,
+        bias: cur,
+        score,
+        price: analysis.price,
+        ...(alertReason ? { alerted: alertReason } : {}),
+      });
 
       console.log(
         `${key}: ${cur} (${score.toFixed(2)})${flipped ? " [전환]" : strong ? " [강함]" : ""}`,
@@ -167,6 +210,7 @@ async function main(): Promise<void> {
   }
 
   await saveJSON(STATE_PATH, nextState);
+  await appendHistory(historyEntries);
 }
 
 main().catch((e) => {

@@ -1,5 +1,7 @@
 import { EMA, RSI, MACD, BollingerBands } from "technicalindicators";
 import type { Candle } from "../data/binance";
+import { detectSwings } from "../patterns/zigzag";
+import { fibState } from "../patterns/fibonacci";
 
 export type LinePoint = { time: number; value: number };
 export type HistPoint = { time: number; value: number; color: string };
@@ -10,6 +12,9 @@ export type CandlePoint = {
   low: number;
   close: number;
 };
+
+export type FibLine = { ratio: number; price: number; label: string };
+export type SwingMarker = { time: number; price: number; type: "high" | "low" };
 
 export type ChartSeries = {
   candles: CandlePoint[];
@@ -23,6 +28,8 @@ export type ChartSeries = {
   macd: LinePoint[];
   macdSignal: LinePoint[];
   macdHist: HistPoint[];
+  fibLines: FibLine[];
+  swings: SwingMarker[];
 };
 
 function alignTail<T>(times: number[], values: T[]): { time: number; value: T }[] {
@@ -94,6 +101,25 @@ export function chartSeries(candles: Candle[]): ChartSeries {
     });
   }
 
+  const swings = detectSwings(candles, 0.03).slice(-12);
+  const swingMarkers: SwingMarker[] = swings.map((s) => ({
+    time: s.time,
+    price: s.price,
+    type: s.type,
+  }));
+
+  const lastPrice = closes[closes.length - 1];
+  const fib = fibState(swings, lastPrice);
+  const fibLines: FibLine[] = fib
+    ? [...fib.retracements, ...fib.extensions]
+        .filter((l) => l.ratio > 0 && l.ratio < 2)
+        .map((l) => ({
+          ratio: l.ratio,
+          price: l.price,
+          label: `${(l.ratio * 100).toFixed(1)}%`,
+        }))
+    : [];
+
   return {
     candles: candleSeries,
     volume,
@@ -106,5 +132,7 @@ export function chartSeries(candles: Candle[]): ChartSeries {
     macd,
     macdSignal,
     macdHist,
+    fibLines,
+    swings: swingMarkers,
   };
 }

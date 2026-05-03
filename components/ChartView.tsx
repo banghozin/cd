@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
   type IChartApi,
+  type SeriesMarker,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
@@ -61,6 +63,29 @@ export default function ChartView({ series, height = 560 }: Props) {
       0,
     );
     candles.setData(series.candles.map((c) => ({ ...c, time: toTime(c.time) })));
+
+    for (const fib of series.fibLines) {
+      const isKey = [0.382, 0.5, 0.618].includes(Number(fib.ratio.toFixed(3)));
+      candles.createPriceLine({
+        price: fib.price,
+        color: isKey ? "rgba(168,85,247,0.55)" : "rgba(168,85,247,0.25)",
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: `fib ${fib.label}`,
+      });
+    }
+
+    if (series.swings.length > 0) {
+      const markers: SeriesMarker<Time>[] = series.swings.map((s) => ({
+        time: toTime(s.time),
+        position: s.type === "high" ? "aboveBar" : "belowBar",
+        color: s.type === "high" ? "#f87171" : "#34d399",
+        shape: s.type === "high" ? "arrowDown" : "arrowUp",
+        text: "",
+      }));
+      createSeriesMarkers(candles, markers);
+    }
 
     const ema20 = chart.addSeries(
       LineSeries,
@@ -187,6 +212,12 @@ export default function ChartView({ series, height = 560 }: Props) {
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-3 h-0.5 bg-orange-400" /> Signal
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-0.5 bg-purple-500/60" /> Fib
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="text-emerald-400">▲</span>/<span className="text-red-400">▼</span> 스윙
         </span>
       </div>
       <div ref={containerRef} className="w-full rounded border border-zinc-800" />

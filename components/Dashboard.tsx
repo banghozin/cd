@@ -5,6 +5,8 @@ import Watchlist, { type WatchItem } from "./Watchlist";
 import ChartView from "./ChartView";
 import AnalysisPanel from "./AnalysisPanel";
 import HelpView from "./HelpView";
+import HistoryView from "./HistoryView";
+import CompareView from "./CompareView";
 import type { Analysis } from "@/lib/analyze";
 import type { Timeframe } from "@/lib/data";
 import type { ChartSeries } from "@/lib/indicators/series";
@@ -16,6 +18,17 @@ type ChartResponse = {
   symbol: string;
   tf: Timeframe;
   series: ChartSeries;
+};
+
+type CompareSeries = {
+  market: string;
+  symbol: string;
+  points: { time: number; value: number }[];
+};
+
+type CompareResponse = {
+  tf: Timeframe;
+  series: CompareSeries[];
 };
 
 type Tab = "analysis" | "help";
@@ -36,6 +49,8 @@ function useChartHeight(): number {
   return h;
 }
 
+const REFRESH_INTERVAL_MS = 60_000;
+
 export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("analysis");
   const [selected, setSelected] = useState<WatchItem | null>(null);
@@ -44,6 +59,11 @@ export default function Dashboard() {
   const [chart, setChart] = useState<ChartResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [compareTarget, setCompareTarget] = useState<WatchItem | null>(null);
+  const [compareData, setCompareData] = useState<CompareResponse | null>(null);
+  const [items, setItems] = useState<WatchItem[]>([]);
   const chartHeight = useChartHeight();
 
   const loadData = useCallback(
@@ -67,6 +87,7 @@ export default function Dashboard() {
         if ("error" in cJson) throw new Error(cJson.error);
         setAnalysis(aJson);
         setChart(cJson);
+        setLastUpdated(new Date());
       } catch (e) {
         setError(e instanceof Error ? e.message : "unknown error");
         setAnalysis(null);
@@ -81,6 +102,55 @@ export default function Dashboard() {
   useEffect(() => {
     if (tab === "analysis" && selected) loadData(selected, tf);
   }, [tab, selected, tf, loadData]);
+
+  useEffect(() => {
+    if (!selected || !compareTarget) {
+      setCompareData(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/compare", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { market: selected.market, symbol: selected.symbol },
+          { market: compareTarget.market, symbol: compareTarget.symbol },
+        ],
+        tf,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d: CompareResponse | { error: string }) => {
+        if (cancelled) return;
+        if ("error" in d) setCompareData(null);
+        else setCompareData(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, compareTarget, tf]);
+
+  useEffect(() => {
+    if (!autoRefresh || tab !== "analysis" || !selected) return;
+    const id = setInterval(() => {
+      if (!document.hidden) loadData(selected, tf);
+    }, REFRESH_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [autoRefresh, tab, selected, tf, loadData]);
+
+  const refreshNow = () => {
+    if (selected) loadData(selected, tf);
+  };
+
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
 
   return (
     <div>
@@ -134,7 +204,11 @@ export default function Dashboard() {
               </span>
             </summary>
             <div className="px-4 pb-4 pt-2 border-t border-zinc-800">
-              <Watchlist selected={selected} onSelect={setSelected} />
+              <Watchlist
+                selected={selected}
+                onSelect={setSelected}
+                onItemsChange={setItems}
+              />
             </div>
           </details>
 
@@ -151,26 +225,120 @@ export default function Dashboard() {
                 <div className="text-xs text-zinc-500 mt-0.5 truncate">
                   {selected?.market} · {selected?.symbol}
                   {analysis && (
-                    <span className="ml-3 tabular-nums">
+                    <span className="ml-3 tabular-nums text-zinc-200">
                       ${analysis.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
                   )}
                 </div>
+                {analysis && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs">
+                    {(["24h", "7d", "30d"] as const).map((key) => {
+                      const map = {
+                        "24h": analysis.changes.change24h,
+                        "7d": analysis.changes.change7d,
+                        "30d": analysis.changes.change30d,
+                      } as const;
+                      const v = map[key];
+                      if (v == null) return null;
+                      const tone =
+                        v > 0 ? "text-emerald-400" : v < 0 ? "text-red-400" : "text-zinc-400";
+                      return (
+                        <span key={key} className="tabular-nums">
+                          <span className="text-zinc-500">{key}</span>
+                          <span className={`ml-1 ${tone}`}>
+                            {v > 0 ? "+" : ""}
+                            {v.toFixed(2)}%
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="flex gap-1 shrink-0">
-                {TIMEFRAMES.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTf(t)}
-                    className={`px-2.5 sm:px-3 py-1 text-xs rounded ${
-                      tf === t
-                        ? "bg-zinc-700 text-zinc-100"
-                        : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-                    }`}
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <div className="flex gap-1">
+                  {TIMEFRAMES.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTf(t)}
+                      className={`px-2.5 sm:px-3 py-1 text-xs rounded ${
+                        tf === t
+                          ? "bg-zinc-700 text-zinc-100"
+                          : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
+                      }`}
+                    >
+                      {t.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1 text-xs">
+                  <span className="text-zinc-500">비교</span>
+                  <select
+                    value={
+                      compareTarget
+                        ? `${compareTarget.market}:${compareTarget.symbol}`
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v) {
+                        setCompareTarget(null);
+                        return;
+                      }
+                      const [m, s] = v.split(":");
+                      const found = items.find(
+                        (i) => i.market === m && i.symbol === s,
+                      );
+                      setCompareTarget(found ?? null);
+                    }}
+                    className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded px-1.5 py-0.5"
                   >
-                    {t.toUpperCase()}
+                    <option value="">없음</option>
+                    {items
+                      .filter(
+                        (i) =>
+                          !selected ||
+                          !(
+                            i.market === selected.market &&
+                            i.symbol === selected.symbol
+                          ),
+                      )
+                      .map((i) => (
+                        <option
+                          key={`${i.market}-${i.symbol}`}
+                          value={`${i.market}:${i.symbol}`}
+                        >
+                          {i.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-zinc-500">
+                  {lastUpdated && (
+                    <span className="tabular-nums">
+                      갱신 {formatTime(lastUpdated)}
+                    </span>
+                  )}
+                  <button
+                    onClick={refreshNow}
+                    disabled={loading}
+                    className="px-1.5 py-0.5 rounded hover:bg-zinc-800 disabled:opacity-50"
+                    title="지금 새로고침"
+                  >
+                    {loading ? "⟳" : "↻"}
                   </button>
-                ))}
+                  <button
+                    onClick={() => setAutoRefresh((v) => !v)}
+                    className={`px-1.5 py-0.5 rounded ${
+                      autoRefresh
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "bg-zinc-800 text-zinc-500"
+                    }`}
+                    title="1분마다 자동 갱신"
+                  >
+                    auto
+                  </button>
+                </div>
               </div>
             </header>
 
@@ -189,10 +357,18 @@ export default function Dashboard() {
               </div>
             )}
 
-            {chart && <ChartView series={chart.series} height={chartHeight} />}
+            {chart && !compareData && (
+              <ChartView series={chart.series} height={chartHeight} />
+            )}
+            {compareData && (
+              <CompareView series={compareData.series} height={chartHeight} />
+            )}
           </main>
 
-          <aside className="min-w-0">
+          <aside className="min-w-0 space-y-4">
+            {selected && (
+              <HistoryView market={selected.market} symbol={selected.symbol} />
+            )}
             {analysis ? (
               <AnalysisPanel analysis={analysis} />
             ) : (

@@ -9,6 +9,13 @@ export type WatchItem = {
   label: string;
 };
 
+type Quote = {
+  market: Market;
+  symbol: string;
+  price: number;
+  change24h: number | null;
+};
+
 const STORAGE_KEY = "chart.watchlist.v1";
 
 const DEFAULTS: WatchItem[] = [
@@ -43,13 +50,52 @@ function save(items: WatchItem[]) {
 type Props = {
   selected: WatchItem | null;
   onSelect: (item: WatchItem) => void;
+  onItemsChange?: (items: WatchItem[]) => void;
 };
 
-export default function Watchlist({ selected, onSelect }: Props) {
+export default function Watchlist({ selected, onSelect, onItemsChange }: Props) {
   const [items, setItems] = useState<WatchItem[]>([]);
+
+  useEffect(() => {
+    onItemsChange?.(items);
+  }, [items, onItemsChange]);
   const [market, setMarket] = useState<Market>("crypto");
   const [symbol, setSymbol] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [quotes, setQuotes] = useState<Record<string, Quote>>({});
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    fetch("/api/quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((i) => ({ market: i.market, symbol: i.symbol })),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data: { quotes?: (Quote & { error?: string })[] }) => {
+        if (cancelled || !data.quotes) return;
+        const map: Record<string, Quote> = {};
+        for (const q of data.quotes) {
+          if (!q.error) map[`${q.market}:${q.symbol}`] = q;
+        }
+        setQuotes(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
+
+  const visibleItems = search.trim()
+    ? items.filter((i) => {
+        const q = search.trim().toUpperCase();
+        return i.symbol.toUpperCase().includes(q) || i.label.toUpperCase().includes(q);
+      })
+    : items;
 
   useEffect(() => {
     const loaded = load();
@@ -94,8 +140,21 @@ export default function Watchlist({ selected, onSelect }: Props) {
         관심 종목
       </h2>
 
+      {items.length > 4 && (
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="검색…"
+          className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-xs mb-2 focus:outline-none focus:border-zinc-600"
+        />
+      )}
+
       <ul className="space-y-1 mb-4">
-        {items.map((it) => {
+        {visibleItems.length === 0 && search.trim() && (
+          <li className="text-xs text-zinc-500 px-2 py-1">검색 결과 없음</li>
+        )}
+        {visibleItems.map((it) => {
           const active =
             selected &&
             selected.market === it.market &&
@@ -110,10 +169,28 @@ export default function Watchlist({ selected, onSelect }: Props) {
                 }`}
               >
                 <button
-                  className="flex-1 text-left"
+                  className="flex-1 text-left min-w-0"
                   onClick={() => onSelect(it)}
                 >
-                  <div className="font-medium">{it.label}</div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-medium truncate">{it.label}</span>
+                    {(() => {
+                      const q = quotes[`${it.market}:${it.symbol}`];
+                      if (!q || q.change24h == null) return null;
+                      const tone =
+                        q.change24h > 0
+                          ? "text-emerald-400"
+                          : q.change24h < 0
+                            ? "text-red-400"
+                            : "text-zinc-400";
+                      return (
+                        <span className={`text-xs tabular-nums shrink-0 ${tone}`}>
+                          {q.change24h > 0 ? "+" : ""}
+                          {q.change24h.toFixed(2)}%
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="text-xs text-zinc-500">
                     {MARKET_KO[it.market]}
                   </div>
