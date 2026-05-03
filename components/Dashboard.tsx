@@ -20,6 +20,22 @@ type ChartResponse = {
 
 type Tab = "analysis" | "help";
 
+function useChartHeight(): number {
+  const [h, setH] = useState(560);
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 640) setH(380);
+      else if (w < 1024) setH(460);
+      else setH(560);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return h;
+}
+
 export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("analysis");
   const [selected, setSelected] = useState<WatchItem | null>(null);
@@ -28,6 +44,7 @@ export default function Dashboard() {
   const [chart, setChart] = useState<ChartResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const chartHeight = useChartHeight();
 
   const loadData = useCallback(
     async (item: WatchItem, timeframe: Timeframe) => {
@@ -68,14 +85,15 @@ export default function Dashboard() {
   return (
     <div>
       <nav className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="text-sm font-semibold text-zinc-200">
-            우크당거스 차트 분석기
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-zinc-200 truncate">
+            <span>우크당거스</span>
+            <span className="hidden sm:inline"> 차트 분석기</span>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0">
             <button
               onClick={() => setTab("analysis")}
-              className={`px-4 py-1.5 text-sm rounded ${
+              className={`px-3 sm:px-4 py-1.5 text-sm rounded ${
                 tab === "analysis"
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
@@ -85,7 +103,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setTab("help")}
-              className={`px-4 py-1.5 text-sm rounded ${
+              className={`px-3 sm:px-4 py-1.5 text-sm rounded ${
                 tab === "help"
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
@@ -100,18 +118,37 @@ export default function Dashboard() {
       {tab === "help" ? (
         <HelpView />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_340px] gap-6 max-w-[1600px] mx-auto p-6">
-          <div className="lg:sticky lg:top-20 lg:h-fit">
+        <div className="lg:grid lg:grid-cols-[260px_1fr_340px] lg:gap-6 max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <details className="lg:hidden mb-4 rounded border border-zinc-800 bg-zinc-900 group">
+            <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2">
+                <span className="text-zinc-500 text-xs uppercase tracking-wider">
+                  관심 종목
+                </span>
+                <span className="text-zinc-200 font-medium">
+                  {selected?.label ?? "—"}
+                </span>
+              </span>
+              <span className="text-zinc-500 text-xs group-open:rotate-180 transition-transform">
+                ▼
+              </span>
+            </summary>
+            <div className="px-4 pb-4 pt-2 border-t border-zinc-800">
+              <Watchlist selected={selected} onSelect={setSelected} />
+            </div>
+          </details>
+
+          <div className="hidden lg:block lg:sticky lg:top-20 lg:h-fit">
             <Watchlist selected={selected} onSelect={setSelected} />
           </div>
 
-          <main className="min-w-0">
-            <header className="mb-4 flex items-baseline justify-between">
-              <div>
-                <h1 className="text-xl font-semibold">
+          <main className="min-w-0 mb-6 lg:mb-0">
+            <header className="mb-4 flex items-baseline justify-between gap-2">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-semibold truncate">
                   {selected?.label ?? "—"}
                 </h1>
-                <div className="text-xs text-zinc-500 mt-0.5">
+                <div className="text-xs text-zinc-500 mt-0.5 truncate">
                   {selected?.market} · {selected?.symbol}
                   {analysis && (
                     <span className="ml-3 tabular-nums">
@@ -120,12 +157,12 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 shrink-0">
                 {TIMEFRAMES.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTf(t)}
-                    className={`px-3 py-1 text-xs rounded ${
+                    className={`px-2.5 sm:px-3 py-1 text-xs rounded ${
                       tf === t
                         ? "bg-zinc-700 text-zinc-100"
                         : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
@@ -144,12 +181,15 @@ export default function Dashboard() {
             )}
 
             {loading && !chart && (
-              <div className="rounded border border-zinc-800 bg-zinc-900 h-[560px] flex items-center justify-center text-sm text-zinc-500">
+              <div
+                className="rounded border border-zinc-800 bg-zinc-900 flex items-center justify-center text-sm text-zinc-500"
+                style={{ height: chartHeight }}
+              >
                 불러오는 중…
               </div>
             )}
 
-            {chart && <ChartView series={chart.series} />}
+            {chart && <ChartView series={chart.series} height={chartHeight} />}
           </main>
 
           <aside className="min-w-0">

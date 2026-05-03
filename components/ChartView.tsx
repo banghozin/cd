@@ -14,9 +14,10 @@ import type { ChartSeries } from "@/lib/indicators/series";
 
 type Props = {
   series: ChartSeries;
+  height?: number;
 };
 
-export default function ChartView({ series }: Props) {
+export default function ChartView({ series, height = 560 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
@@ -25,7 +26,7 @@ export default function ChartView({ series }: Props) {
 
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
-      height: 560,
+      height,
       layout: {
         background: { color: "#0a0a0a" },
         textColor: "#a1a1aa",
@@ -144,9 +145,11 @@ export default function ChartView({ series }: Props) {
     );
     macdSig.setData(series.macdSignal.map((p) => ({ time: toTime(p.time), value: p.value })));
 
-    chart.panes()[1]?.setHeight(80);
-    chart.panes()[2]?.setHeight(100);
-    chart.panes()[3]?.setHeight(100);
+    const volH = Math.max(50, Math.round(height * 0.14));
+    const oscH = Math.max(70, Math.round(height * 0.18));
+    chart.panes()[1]?.setHeight(volH);
+    chart.panes()[2]?.setHeight(oscH);
+    chart.panes()[3]?.setHeight(oscH);
 
     chart.timeScale().fitContent();
 
@@ -162,7 +165,7 @@ export default function ChartView({ series }: Props) {
       chart.remove();
       chartRef.current = null;
     };
-  }, [series]);
+  }, [series, height]);
 
   return (
     <div className="w-full">
