@@ -79,14 +79,24 @@ export default function Dashboard() {
           fetch(`/api/analyze?${params}`, { cache: "no-store" }),
           fetch(`/api/chart?${params}&tf=${timeframe}`, { cache: "no-store" }),
         ]);
-        if (!aRes.ok) throw new Error(`analyze: ${aRes.status}`);
-        if (!cRes.ok) throw new Error(`chart: ${cRes.status}`);
-        const aJson = (await aRes.json()) as Analysis | { error: string };
-        const cJson = (await cRes.json()) as ChartResponse | { error: string };
-        if ("error" in aJson) throw new Error(aJson.error);
-        if ("error" in cJson) throw new Error(cJson.error);
-        setAnalysis(aJson);
-        setChart(cJson);
+        const aRaw = (await aRes.json().catch(() => ({}))) as
+          | Analysis
+          | { error?: string };
+        const cRaw = (await cRes.json().catch(() => ({}))) as
+          | ChartResponse
+          | { error?: string };
+        if (!aRes.ok)
+          throw new Error(
+            `analyze ${aRes.status}: ${("error" in aRaw && aRaw.error) || "요청 실패"}`,
+          );
+        if (!cRes.ok)
+          throw new Error(
+            `chart ${cRes.status}: ${("error" in cRaw && cRaw.error) || "요청 실패"}`,
+          );
+        if ("error" in aRaw && aRaw.error) throw new Error(aRaw.error);
+        if ("error" in cRaw && cRaw.error) throw new Error(cRaw.error);
+        setAnalysis(aRaw as Analysis);
+        setChart(cRaw as ChartResponse);
         setLastUpdated(new Date());
       } catch (e) {
         setError(e instanceof Error ? e.message : "unknown error");
