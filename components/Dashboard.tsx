@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Watchlist, { type WatchItem } from "./Watchlist";
 import ChartView from "./ChartView";
 import AnalysisPanel from "./AnalysisPanel";
-import HelpView from "./HelpView";
 import HistoryView from "./HistoryView";
 import CompareView from "./CompareView";
 import type { Analysis } from "@/lib/analyze";
@@ -31,8 +30,6 @@ type CompareResponse = {
   series: CompareSeries[];
 };
 
-type Tab = "analysis" | "help";
-
 function useChartHeight(): number {
   const [h, setH] = useState(560);
   useEffect(() => {
@@ -52,7 +49,6 @@ function useChartHeight(): number {
 const REFRESH_INTERVAL_MS = 60_000;
 
 export default function Dashboard() {
-  const [tab, setTab] = useState<Tab>("analysis");
   const [selected, setSelected] = useState<WatchItem | null>(null);
   const [tf, setTf] = useState<Timeframe>("1d");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -110,8 +106,8 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
-    if (tab === "analysis" && selected) loadData(selected, tf);
-  }, [tab, selected, tf, loadData]);
+    if (selected) loadData(selected, tf);
+  }, [selected, tf, loadData]);
 
   useEffect(() => {
     if (!selected || !compareTarget) {
@@ -143,12 +139,12 @@ export default function Dashboard() {
   }, [selected, compareTarget, tf]);
 
   useEffect(() => {
-    if (!autoRefresh || tab !== "analysis" || !selected) return;
+    if (!autoRefresh || !selected) return;
     const id = setInterval(() => {
       if (!document.hidden) loadData(selected, tf);
     }, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [autoRefresh, tab, selected, tf, loadData]);
+  }, [autoRefresh, selected, tf, loadData]);
 
   const refreshNow = () => {
     if (selected) loadData(selected, tf);
@@ -163,42 +159,7 @@ export default function Dashboard() {
     });
 
   return (
-    <div>
-      <nav className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold text-zinc-200 truncate">
-            <span>우크당거스</span>
-            <span className="hidden sm:inline"> 차트 분석기</span>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => setTab("analysis")}
-              className={`px-3 sm:px-4 py-1.5 text-sm rounded ${
-                tab === "analysis"
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-              }`}
-            >
-              분석
-            </button>
-            <button
-              onClick={() => setTab("help")}
-              className={`px-3 sm:px-4 py-1.5 text-sm rounded ${
-                tab === "help"
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-              }`}
-            >
-              사용법
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {tab === "help" ? (
-        <HelpView />
-      ) : (
-        <div className="lg:grid lg:grid-cols-[260px_1fr_340px] lg:gap-6 max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+    <div className="lg:grid lg:grid-cols-[260px_1fr_340px] lg:gap-6 max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <details className="lg:hidden mb-4 rounded border border-zinc-800 bg-zinc-900 group">
             <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between text-sm">
               <span className="flex items-center gap-2">
@@ -387,8 +348,6 @@ export default function Dashboard() {
               </div>
             )}
           </aside>
-        </div>
-      )}
     </div>
   );
 }

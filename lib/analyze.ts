@@ -36,7 +36,7 @@ function pctChange(now: number, then: number | undefined): number | null {
   return ((now - then) / then) * 100;
 }
 
-function analyzeFrame(candles: Candle[]): TimeframeAnalysis {
+export function analyzeFrame(candles: Candle[]): TimeframeAnalysis {
   const ind = snapshot(candles);
   const pat = patterns(candles);
   const sig = aggregate(ind, pat);
