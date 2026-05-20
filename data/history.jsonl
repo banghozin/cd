@@ -374,3 +374,5 @@
 {"ts":"2026-05-20T05:02:00.401Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.6,"price":220.61000061035156}
 {"ts":"2026-05-20T09:26:48.800Z","market":"stock","symbol":"AAPL","bias":"neutral","score":0.19999999999999998,"price":298.9700012207031}
 {"ts":"2026-05-20T09:26:48.982Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.7333333333333334,"price":220.61000061035156}
+{"ts":"2026-05-20T12:21:36.736Z","market":"stock","symbol":"AAPL","bias":"neutral","score":0.19999999999999998,"price":298.9700012207031}
+{"ts":"2026-05-20T12:21:36.835Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.3,"price":220.61000061035156}
