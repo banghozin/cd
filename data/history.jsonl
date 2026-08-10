@@ -2009,3 +2009,7 @@
 {"ts":"2026-08-10T20:38:11.103Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.4,"price":217.5500030517578}
 {"ts":"2026-08-10T21:37:40.656Z","market":"stock","symbol":"AAPL","bias":"neutral","score":-0.04999999999999999,"price":308.260009765625}
 {"ts":"2026-08-10T21:37:40.730Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.4,"price":217.5500030517578}
+{"ts":"2026-08-10T22:33:38.974Z","market":"crypto","symbol":"BTCUSDT","bias":"sell","score":-0.5,"price":63980,"alerted":"strong-signal"}
+{"ts":"2026-08-10T22:33:39.579Z","market":"crypto","symbol":"ETHUSDT","bias":"buy","score":0.35,"price":1874.51}
+{"ts":"2026-08-10T22:33:40.104Z","market":"stock","symbol":"AAPL","bias":"neutral","score":-0.15000000000000002,"price":308.260009765625}
+{"ts":"2026-08-10T22:33:40.678Z","market":"stock","symbol":"NVDA","bias":"buy","score":0.4,"price":217.5500030517578}
