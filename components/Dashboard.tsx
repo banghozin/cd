@@ -46,7 +46,7 @@ function useChartHeight(): number {
   return h;
 }
 
-const REFRESH_INTERVAL_MS = 60_000;
+const REFRESH_INTERVAL_MS = 5 * 60_000;
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<WatchItem | null>(null);
@@ -56,7 +56,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [compareTarget, setCompareTarget] = useState<WatchItem | null>(null);
   const [compareData, setCompareData] = useState<CompareResponse | null>(null);
   const [items, setItems] = useState<WatchItem[]>([]);
@@ -305,9 +305,9 @@ export default function Dashboard() {
                         ? "bg-emerald-500/20 text-emerald-400"
                         : "bg-zinc-800 text-zinc-500"
                     }`}
-                    title="1분마다 자동 갱신"
+                    title="5분마다 자동 갱신"
                   >
-                    auto
+                    auto 5m
                   </button>
                 </div>
               </div>

@@ -16,7 +16,7 @@ export type BacktestResult = {
 
 const WINDOWS_DAYS = [1, 7, 30];
 const WARMUP = 30;
-const TOTAL_DAYS = 200;
+const TOTAL_DAYS = 120;
 
 function emptyHit(): HitRate {
   return { hits: 0, total: 0, rate: null };

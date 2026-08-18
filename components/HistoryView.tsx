@@ -21,12 +21,44 @@ const W = 320;
 const H = 90;
 const PAD_X = 4;
 const PAD_Y = 6;
+const CACHE_PREFIX = "chart.history.cache.v1:";
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function readCache(key: string): Entry[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at: number; entries: Entry[] };
+    if (Date.now() - parsed.at > CACHE_TTL_MS) return null;
+    return parsed.entries;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key: string, entries: Entry[]) {
+  try {
+    localStorage.setItem(
+      CACHE_PREFIX + key,
+      JSON.stringify({ at: Date.now(), entries }),
+    );
+  } catch {}
+}
 
 export default function HistoryView({ market, symbol }: Props) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const key = `${market}:${symbol}`;
+    const cached = readCache(key);
+    if (cached) {
+      setEntries(cached);
+      setError(null);
+      return;
+    }
+
     let cancelled = false;
     setEntries(null);
     setError(null);
@@ -36,7 +68,11 @@ export default function HistoryView({ market, symbol }: Props) {
       .then((data: { entries?: Entry[]; error?: string }) => {
         if (cancelled) return;
         if (data.error) setError(data.error);
-        else setEntries(data.entries ?? []);
+        else {
+          const list = data.entries ?? [];
+          setEntries(list);
+          writeCache(key, list);
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : "오류");

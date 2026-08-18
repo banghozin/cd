@@ -17,6 +17,35 @@ type Quote = {
 };
 
 const STORAGE_KEY = "chart.watchlist.v1";
+const QUOTES_CACHE_KEY = "chart.quotes.cache.v1";
+const QUOTES_TTL_MS = 30 * 60 * 1000;
+
+type QuotesCache = { at: number; map: Record<string, Quote> };
+
+function loadQuotesCache(items: WatchItem[]): Record<string, Quote> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(QUOTES_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as QuotesCache;
+    if (Date.now() - parsed.at > QUOTES_TTL_MS) return null;
+    for (const it of items) {
+      if (!parsed.map[`${it.market}:${it.symbol}`]) return null;
+    }
+    return parsed.map;
+  } catch {
+    return null;
+  }
+}
+
+function saveQuotesCache(map: Record<string, Quote>) {
+  try {
+    localStorage.setItem(
+      QUOTES_CACHE_KEY,
+      JSON.stringify({ at: Date.now(), map }),
+    );
+  } catch {}
+}
 
 const DEFAULTS: WatchItem[] = [
   { market: "crypto", symbol: "BTCUSDT", label: "BTC/USDT" },
@@ -67,6 +96,11 @@ export default function Watchlist({ selected, onSelect, onItemsChange }: Props) 
 
   useEffect(() => {
     if (items.length === 0) return;
+    const cached = loadQuotesCache(items);
+    if (cached) {
+      setQuotes(cached);
+      return;
+    }
     let cancelled = false;
     fetch("/api/quotes", {
       method: "POST",
@@ -83,6 +117,7 @@ export default function Watchlist({ selected, onSelect, onItemsChange }: Props) 
           if (!q.error) map[`${q.market}:${q.symbol}`] = q;
         }
         setQuotes(map);
+        saveQuotesCache(map);
       })
       .catch(() => {});
     return () => {

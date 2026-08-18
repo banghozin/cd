@@ -34,7 +34,7 @@ type AlertHitRateResponse = {
 
 const STORAGE_KEY = "chart.watchlist.v1";
 const CACHE_KEY = "chart.backtest.cache.v1";
-const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function loadWatchlist(): WatchItem[] {
   if (typeof window === "undefined") return [];
@@ -215,8 +215,8 @@ export default function HitRateView() {
           <div>
             <h2 className="text-lg font-semibold">백테스트 적중률</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              브라우저 관심 종목 · 200일 1일봉 기준 · 1일/7일/30일 후 가격 방향
-              일치율
+              브라우저 관심 종목 · 120일 1일봉 기준 · 1일/7일/30일 후 가격 방향
+              일치율 · 24시간 캐시
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
