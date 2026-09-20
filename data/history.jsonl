@@ -2981,3 +2981,5 @@
 {"ts":"2026-09-19T23:52:29.398Z","market":"crypto","symbol":"ETHUSDT","bias":"neutral","score":0.2,"price":2634.68}
 {"ts":"2026-09-19T23:52:29.793Z","market":"stock","symbol":"AAPL","bias":"neutral","score":0.2,"price":336.1300048828125}
 {"ts":"2026-09-19T23:52:30.024Z","market":"stock","symbol":"NVDA","bias":"neutral","score":0.16666666666666666,"price":222.27000427246094}
+{"ts":"2026-09-20T03:14:35.656Z","market":"stock","symbol":"AAPL","bias":"neutral","score":0.2,"price":336.1300048828125}
+{"ts":"2026-09-20T03:14:35.835Z","market":"stock","symbol":"NVDA","bias":"neutral","score":0.16666666666666666,"price":222.27000427246094}
