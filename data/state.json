@@ -1,22 +1,12 @@
 {
-  "crypto:BTCUSDT": {
-    "bias": "buy",
-    "score": 0.8666666666666667,
-    "ts": "2026-09-27T00:11:27.674Z"
-  },
-  "crypto:ETHUSDT": {
-    "bias": "neutral",
-    "score": 0,
-    "ts": "2026-09-27T00:11:27.846Z"
-  },
   "stock:AAPL": {
     "bias": "neutral",
     "score": -0.1,
-    "ts": "2026-09-27T00:11:28.084Z"
+    "ts": "2026-09-27T06:09:36.162Z"
   },
   "stock:NVDA": {
     "bias": "buy",
     "score": 0.4,
-    "ts": "2026-09-27T00:11:28.163Z"
+    "ts": "2026-09-27T06:09:36.255Z"
   }
 }
