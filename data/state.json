@@ -1,12 +1,12 @@
 {
   "stock:AAPL": {
-    "bias": "neutral",
-    "score": -0.2,
-    "ts": "2026-11-04T18:25:55.645Z"
+    "bias": "buy",
+    "score": 0.3,
+    "ts": "2026-11-05T00:07:02.021Z"
   },
   "stock:NVDA": {
-    "bias": "buy",
-    "score": 0.6,
-    "ts": "2026-11-04T18:25:55.799Z"
+    "bias": "neutral",
+    "score": -0.2,
+    "ts": "2026-11-05T00:07:02.121Z"
   }
 }
